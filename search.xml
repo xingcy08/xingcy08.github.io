@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Hello World</title>
+    <url>/2024/08/07/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>Java 常用命令</title>
+    <url>/2021/10/20/Java%20%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</url>
+    <content><![CDATA[<h2 id="查看-Java-版本"><a href="#查看-Java-版本" class="headerlink" title="查看 Java 版本"></a>查看 Java 版本</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">➜  ~ java -version</span><br><span class="line">openjdk version &quot;1.8.0_275&quot;</span><br><span class="line">OpenJDK Runtime Environment (Zulu 8.50.0.1017-CA-macos-aarch64) (build 1.8.0_275-b01)</span><br><span class="line">OpenJDK 64-Bit Server VM (Zulu 8.50.0.1017-CA-macos-aarch64) (build 25.275-b01, mixed mode)</span><br></pre></td></tr></table></figure>
+
+<h2 id="运行-Jar-包"><a href="#运行-Jar-包" class="headerlink" title="运行 Jar 包"></a>运行 Jar 包</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">java -jar app-1.0-SNAPSHOT.jar</span><br></pre></td></tr></table></figure>
+
+<h2 id="后台运行-Jar-包并限制内存"><a href="#后台运行-Jar-包并限制内存" class="headerlink" title="后台运行 Jar 包并限制内存"></a>后台运行 Jar 包并限制内存</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">nohup java -Xms128m -Xmx128m -XX:PermSize=128M -XX:MaxPermSize=128M  -jar app-1.0-SNAPSHOT.jar  &gt; /dev/null 2&gt;&amp;1 &amp;</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+      </tags>
+  </entry>
+</search>
