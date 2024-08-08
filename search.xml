@@ -7,7 +7,7 @@
 
 <h2 id="运行-Jar-包"><a href="#运行-Jar-包" class="headerlink" title="运行 Jar 包"></a>运行 Jar 包</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">java -jar app-1.0-SNAPSHOT.jar</span><br></pre></td></tr></table></figure>
 
-<h2 id="后台运行-Jar-包并限制内存"><a href="#后台运行-Jar-包并限制内存" class="headerlink" title="后台运行 Jar 包并限制内存"></a>后台运行 Jar 包并限制内存</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">nohup java -Xms128m -Xmx128m -XX:PermSize=128M -XX:MaxPermSize=128M  -jar app-1.0-SNAPSHOT.jar  &gt; /dev/null 2&gt;&amp;1 &amp;</span><br><span class="line">```/null 2&gt;&amp;1 &amp;</span><br></pre></td></tr></table></figure>]]></content>
+<h2 id="后台运行-Jar-包并限制内存"><a href="#后台运行-Jar-包并限制内存" class="headerlink" title="后台运行 Jar 包并限制内存"></a>后台运行 Jar 包并限制内存</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">nohup java -Xms128m -Xmx128m -XX:PermSize=128M -XX:MaxPermSize=128M  -jar app-1.0-SNAPSHOT.jar  &gt; /dev/null 2&gt;&amp;1 &amp;</span><br></pre></td></tr></table></figure>]]></content>
       <categories>
         <category>Java</category>
       </categories>
