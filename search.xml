@@ -244,6 +244,24 @@
       </tags>
   </entry>
   <entry>
+    <title>云服务器其中一台服务器和另外几台互相ping不通的问题排查</title>
+    <url>/posts/084d93e0-b760-11ef-8ac0-bd6a9d46898f/</url>
+    <content><![CDATA[<h2 id="现象描述"><a href="#现象描述" class="headerlink" title="现象描述"></a>现象描述</h2><p>我们在阿里云上有 12 台服务器，其中 2 台服务器是部署了 <code>doris</code> 服务，内网IP（172.21.212.227，172.21.212.225），还有一台后台服务器内网IP（172.18.20.233），目前发现后台服务器和那两台 <code>doris</code> 服务器互相 <code>ping</code> 不通，其余的服务器都能和 <code>doris</code> 互相 <code>ping</code> 通。这说明肯定是后台服务器的设置问题。</p>
+<h2 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h2><p>从 <code>IP</code> 可以看到两台 <code>doris</code> 服务和后台服务器的网段不一样，一个是 <code>21</code>，一个是 <code>18</code>。</p>
+<p>先使用 <code>route -n</code> 看一下路由表</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br></pre></td></tr></table></figure>
+<p>发现 <code>172.21</code> 网段并不是走的 <code>eth0</code> 网卡，而是走的 <code>br-c4032e08166c</code> 网卡，这就是为什么 <code>ping</code> 不通的问题所在。</p>
+<p>我们手动来添加两条路由</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.227  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.225  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br><span class="line">172.21.212.225  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br><span class="line">172.21.212.227  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br></pre></td></tr></table></figure>
+
+<p>这个时候在去 <code>ping</code> 两台 <code>doris</code> 服务，发现就没问题了。</p>
+<h2 id="服务器重启后-route-丢失"><a href="#服务器重启后-route-丢失" class="headerlink" title="服务器重启后 route 丢失"></a>服务器重启后 <code>route</code> 丢失</h2><p>刚才执行的 <code>route add</code> 当服务器重启后就需要重新执行了，有多种方法可以将该命令持久化保存，我选择了使用 <code>crontab</code> 来监听服务器重启的事件，先使用 <code>crontab -e</code> 打开定时任务配置文件，然后添加如下内容:</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">@reboot route add -host 172.21.212.227 gw 172.18.31.253 dev eth0</span><br><span class="line">@reboot route add -host 172.21.212.225 gw 172.18.31.253 dev eth0</span><br></pre></td></tr></table></figure>
+
+<p>以上在服务器重启后就会自动把这两条路由加上</p>
+]]></content>
+  </entry>
+  <entry>
     <title>《底层逻辑》读后感</title>
     <url>/posts/f99e2830-556e-11ef-b5b0-e3aaa920b5b0/</url>
     <content><![CDATA[<p>这是 2022 年读的第一本书，《底层逻辑》，这本书读了有 6 个小时左右（微信读书 App 记录的时间），从什么时候开始读的忘记了，下本书应该记录一下从什么时候开始读的。这也是第一次写读后感，也不知道怎么落笔，就简单的先从介绍下这本书的内容，到我读这本书的感受，到最后读完这本书有什么感想按照这样的顺序来说吧。</p>
@@ -262,24 +280,6 @@
       <tags>
         <tag>读书</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>云服务器其中一台服务器和另外几台互相ping不通的问题排查</title>
-    <url>/posts/084d93e0-b760-11ef-8ac0-bd6a9d46898f/</url>
-    <content><![CDATA[<h2 id="现象描述"><a href="#现象描述" class="headerlink" title="现象描述"></a>现象描述</h2><p>我们在阿里云上有 12 台服务器，其中 2 台服务器是部署了 <code>doris</code> 服务，内网IP（172.21.212.227，172.21.212.225），还有一台后台服务器内网IP（172.18.20.233），目前发现后台服务器和那两台 <code>doris</code> 服务器互相 <code>ping</code> 不通，其余的服务器都能和 <code>doris</code> 互相 <code>ping</code> 通。这说明肯定是后台服务器的设置问题。</p>
-<h2 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h2><p>从 <code>IP</code> 可以看到两台 <code>doris</code> 服务和后台服务器的网段不一样，一个是 <code>21</code>，一个是 <code>18</code>。</p>
-<p>先使用 <code>route -n</code> 看一下路由表</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br></pre></td></tr></table></figure>
-<p>发现 <code>172.21</code> 网段并不是走的 <code>eth0</code> 网卡，而是走的 <code>br-c4032e08166c</code> 网卡，这就是为什么 <code>ping</code> 不通的问题所在。</p>
-<p>我们手动来添加两条路由</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.227  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.225  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br><span class="line">172.21.212.225  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br><span class="line">172.21.212.227  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br></pre></td></tr></table></figure>
-
-<p>这个时候在去 <code>ping</code> 两台 <code>doris</code> 服务，发现就没问题了。</p>
-<h2 id="服务器重启后-route-丢失"><a href="#服务器重启后-route-丢失" class="headerlink" title="服务器重启后 route 丢失"></a>服务器重启后 <code>route</code> 丢失</h2><p>刚才执行的 <code>route add</code> 当服务器重启后就需要重新执行了，有多种方法可以将该命令持久化保存，我选择了使用 <code>crontab</code> 来监听服务器重启的事件，先使用 <code>crontab -e</code> 打开定时任务配置文件，然后添加如下内容:</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">@reboot route add -host 172.21.212.227 gw 172.18.31.253 dev eth0</span><br><span class="line">@reboot route add -host 172.21.212.225 gw 172.18.31.253 dev eth0</span><br></pre></td></tr></table></figure>
-
-<p>以上在服务器重启后就会自动把这两条路由加上</p>
-]]></content>
   </entry>
   <entry>
     <title>又传来猝死消息，生命只有一次</title>
@@ -351,52 +351,82 @@
       </tags>
   </entry>
   <entry>
-    <title>程序员的2021年总结</title>
-    <url>/posts/552b4f80-556e-11ef-b968-d9c5127d5552/</url>
-    <content><![CDATA[<p>转眼间2021年也过去了，也即将迎来了农历新年的日子。</p>
-<p>回首过去，感慨最深的就是时光飞逝，眨眼间，距离第一份工作已经过去了 7 年，距离第一份程序员职业也已经过去了 5 年，上一次写年终总结还是 2018 年了，这次因为疫情的原因困在杭州，心血来潮，想起来要写一篇关于过去几年的总结和对未来的展望，对自己的状态做个复盘。</p>
-<p>关于工作，过去几年并不算顺利，自己也不算满意，程序员这份职业是一个日新月异，需要不断持续向自己灌输新知识才能跟上发展的步伐，随着越来越多的人知道了程序员这份职业，越来越多的人了解到程序员的高薪，越来越多的人也涌入了程序员这个行业，在中国信息时代高速发展的今天，程序员用一行行代码敲出了这个世界的丰富多彩，就像当初工地上的工人用一块块砖头垒出了一座座高楼大厦。程序员也一直自嘲是码农，而在 2021 年北京市外来新生代农民工检测报告中，曾经的自嘲也被得到了实锤。</p>
-<p><img src="/images/posts/552b4f80-556e-11ef-b968-d9c5127d5552/img.png" alt="图片"></p>
-<p>刚入行时也会有种错觉「会写程序的最厉害」，随着时间的推移，人的思想也会慢慢改变，觉得过去的一些想法很傻逼，技术是为了解决问题的，如果说一个技术不能解决问题，那这个技术就是一文不值。</p>
-<p>从 19 年来到杭州找工作屡屡碰壁，有发了 offer 因为自己的规划无法入职的、有入职后一周发现公司文化、工作内容和自己想象有差距而离职的、有入职三个月因公司经营问题需要搬到上海工作，而自己的规划没有去上海的意愿不得已离职的。其实，找一份工作不难，找一份能称心如意的工作比较难，遇到一个好的领导、好的老板很难。</p>
-<p>当然，更多的还是自己的问题</p>
+    <title>记一次 OpenVPN 配置场景问题</title>
+    <url>/posts/d824f3a0-16d9-11f0-be1c-9719f9c88803/</url>
+    <content><![CDATA[<h1 id="记一次-OpenVPN-配置解决-RDS-安全问题"><a href="#记一次-OpenVPN-配置解决-RDS-安全问题" class="headerlink" title="记一次 OpenVPN 配置解决 RDS 安全问题"></a>记一次 OpenVPN 配置解决 RDS 安全问题</h1><h2 id="1-问题背景"><a href="#1-问题背景" class="headerlink" title="1. 问题背景"></a>1. 问题背景</h2><p>出于某些原因，线上 RDS 数据库的访问凭证（用户名密码）泄露到了公司内部。这导致了几个潜在的安全隐患：</p>
 <ol>
-<li><p>目前没有一个拿出手的学历（即将拥有成考的毕业证）。</p>
-</li>
-<li><p>年龄和工作经验不符，会遭受面试官的质疑。</p>
-</li>
-<li><p>理论知识储备不足，欠缺系统底层知识。即使实战经验多么丰富，都要通过面试向面试官展现出来，让面试官看到你的闪光点。这一点可以通过平常写博客写教程、向开源项目贡献 PR 等渠道积累个人影响力。将平时在工作中遇到的难点整理记录下来，形成文字沉淀，发布博客平台，一是避免自己忘记，二是可以供其他人遇到相同的问题时提供一个思路。</p>
-</li>
+<li><strong>公网访问风险</strong>：公司网络环境下，由于 RDS 公网地址的 IP 白名单包含了公司出口 IP，无权限的同事获取公网 RDS 地址后可以直接连接线上数据库</li>
+<li><strong>VPN 访问风险</strong>：连接公司内网 VPN 后，可以通过 RDS 内网地址连接到数据库</li>
+<li><strong>跳板机风险</strong>：测试服务器可以作为跳板，通过内网 RDS 地址连接线上库</li>
 </ol>
-<p>接着说 21 年的工作状态，在 21 年中学了更多种的语言</p>
+<p>本文记录了如何通过配置来逐一解决这些问题，确保只有授权人员可以访问线上数据库。</p>
+<h2 id="2-解决方案"><a href="#2-解决方案" class="headerlink" title="2. 解决方案"></a>2. 解决方案</h2><h3 id="2-1-剔除-RDS-公网访问白名单"><a href="#2-1-剔除-RDS-公网访问白名单" class="headerlink" title="2.1 剔除 RDS 公网访问白名单"></a>2.1 剔除 RDS 公网访问白名单</h3><p><strong>问题</strong>：公司网络环境下可以通过公网 RDS 地址访问线上数据库</p>
+<p><strong>解决方法</strong>：</p>
+<p>在阿里云 RDS 控制台的安全设置中，将公司的外网出口 IP 从白名单中移除，这样公司网络环境下就无法通过公网地址连接数据库了。</p>
+<h3 id="2-2-阻断-VPN-连接内网-RDS-的通道"><a href="#2-2-阻断-VPN-连接内网-RDS-的通道" class="headerlink" title="2.2 阻断 VPN 连接内网 RDS 的通道"></a>2.2 阻断 VPN 连接内网 RDS 的通道</h3><p><strong>问题</strong>：连接公司 VPN 后可通过内网地址访问 RDS</p>
+<p><strong>当前配置</strong>：OpenVPN 服务端配置文件中的路由配置如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">该配置使整个网段的流量都通过 VPN 隧道</span></span><br><span class="line">push &quot;route 172.18.20.0 255.255.255.0&quot;</span><br></pre></td></tr></table></figure>
+
+<p>这行配置的作用是让整个网段（172.18.20.0&#x2F;24）的请求都走 VPN 流量。由于 RDS 内网地址为 <code>172.18.20.235</code>，属于该网段，所以任何连接了 VPN 的用户都可以通过内网地址连接数据库。</p>
+<p><strong>解决方案</strong>：添加一条更精确的路由规则，优先级更高：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">强制 RDS IP 流量走本地网关而非 VPN 隧道</span></span><br><span class="line">push &quot;route 172.18.20.235 255.255.255.255 net_gateway&quot;</span><br></pre></td></tr></table></figure>
+
+<p>该配置会精准匹配 RDS IP 地址的流量，并强制其走 VPN 客户端本地的网关，而不是 VPN 隧道，从而阻断了通过 VPN 访问内网 RDS 的可能性。</p>
+<h3 id="2-3-防止测试服务器作为跳板机"><a href="#2-3-防止测试服务器作为跳板机" class="headerlink" title="2.3 防止测试服务器作为跳板机"></a>2.3 防止测试服务器作为跳板机</h3><p><strong>问题</strong>：由于测试服务器与 RDS 在同一网段且可以内网通信，无权限同事仍可通过测试服务器作为跳板连接线上数据库。</p>
+<p><strong>解决方案</strong>：修改 DNS 解析，阻断连接</p>
+<p>在测试服务器的 <code>/etc/hosts</code> 文件中添加以下配置：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">将 RDS 内网域名解析至本地回环地址，阻断连接</span></span><br><span class="line">127.0.0.1  rds内网域名</span><br></pre></td></tr></table></figure>
+
+<p>这样，当有人尝试在测试服务器上连接 RDS 内网域名时，会被解析到本地回环地址 <code>127.0.0.1</code>，导致连接失败。</p>
+<h2 id="3-进阶解决方案：基于用户的精细化权限控制"><a href="#3-进阶解决方案：基于用户的精细化权限控制" class="headerlink" title="3. 进阶解决方案：基于用户的精细化权限控制"></a>3. 进阶解决方案：基于用户的精细化权限控制</h2><p>以上三个解决方案在解决安全问题的同时，也限制了有权限用户的正常访问。为此，我们可以通过修改 OpenVPN 服务端配置，实现基于用户的精细化权限控制：只允许特定用户通过 VPN 访问内网 RDS。</p>
+<h3 id="3-1-修改-OpenVPN-服务器配置"><a href="#3-1-修改-OpenVPN-服务器配置" class="headerlink" title="3.1 修改 OpenVPN 服务器配置"></a>3.1 修改 OpenVPN 服务器配置</h3><p>在 <code>/etc/openvpn/server/server.conf</code> 配置文件中添加以下内容：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">启用脚本执行权限（级别 3 允许调用外部程序）</span></span><br><span class="line">script-security 3</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">设置客户端连接时执行的脚本</span></span><br><span class="line">client-connect /etc/openvpn/client-connect.sh</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-创建客户端连接脚本"><a href="#3-2-创建客户端连接脚本" class="headerlink" title="3.2 创建客户端连接脚本"></a>3.2 创建客户端连接脚本</h3><p>创建并设置脚本权限：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">cd /etc/openvpn</span><br><span class="line">touch client-connect.sh</span><br><span class="line">chmod 755 client-connect.sh  # 使用更安全的权限设置</span><br></pre></td></tr></table></figure>
+
+<p>脚本内容如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">!/bin/bash</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">获取参数和用户名</span></span><br><span class="line">CONFIG_FILE=&quot;$1&quot;  # OpenVPN 生成的临时配置文件</span><br><span class="line">TIMESTAMP=$(date &quot;+%Y-%m-%d %H:%M:%S&quot;)</span><br><span class="line">LOG_FILE=&quot;$(dirname &quot;$0&quot;)/client-connect.log&quot;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">从环境变量获取用户名（优先使用 username，其次是 common_name）</span></span><br><span class="line">USERNAME=&quot;$&#123;username:-$&#123;common_name:-UNKNOWN_USER&#125;&#125;&quot;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">创建日志文件（如果不存在）</span></span><br><span class="line">if [ ! -f &quot;$LOG_FILE&quot; ]; then</span><br><span class="line">    echo &quot;Timestamp | Username | Config File | Action Taken&quot; &gt; &quot;$LOG_FILE&quot;</span><br><span class="line">    echo &quot;------------------------------------------------&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line">fi</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">记录连接基本信息</span></span><br><span class="line">LOG_ENTRY=&quot;$TIMESTAMP | $USERNAME | $CONFIG_FILE&quot;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">基于用户名进行权限控制</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">这里可以扩展为从数据库或配置文件读取授权用户列表</span></span><br><span class="line">if [ &quot;$USERNAME&quot; = &quot;xingcy&quot; ]; then</span><br><span class="line">    # 允许特定用户访问 RDS 内网地址</span><br><span class="line">    echo &quot;push \&quot;route 172.18.20.235 255.255.255.255 vpn_gateway\&quot;&quot; &gt;&gt; &quot;$CONFIG_FILE&quot;</span><br><span class="line">    echo &quot;$LOG_ENTRY | Added VPN route for 172.18.20.235&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line">else</span><br><span class="line">    # 其他用户不添加特殊路由</span><br><span class="line">    echo &quot;$LOG_ENTRY | No special routing applied&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line">fi</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">记录环境变量（调试用）</span></span><br><span class="line">echo &quot;[$TIMESTAMP] Environment variables:&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line">env | grep -E &#x27;username|common_name|script_&#x27; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">记录最终配置（调试用）</span></span><br><span class="line">echo &quot;[$TIMESTAMP] Final config file content:&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line">cat &quot;$CONFIG_FILE&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line">echo &quot;----------------------------------------&quot; &gt;&gt; &quot;$LOG_FILE&quot;</span><br><span class="line"></span><br><span class="line">exit 0</span><br></pre></td></tr></table></figure>
+
+<p><strong>脚本工作原理</strong>：</p>
 <ol>
-<li><p>用 <strong>Java</strong> 语言，<strong>SpringBoot</strong> 框架开发 <strong>App</strong> 端的接口</p>
-</li>
-<li><p>学习了 <strong>Android</strong> 语言和 <strong>Kotlin</strong> 可以独立开发安卓 <strong>App</strong></p>
-</li>
-<li><p>使用 <strong>Vue</strong> 开发管理系统（这个是很早就使用了）</p>
-</li>
+<li>脚本在客户端连接 VPN 时被调用</li>
+<li>获取连接用户的用户名</li>
+<li>只有特定用户（本例中为 <code>xingcy</code>）才会接收到允许访问 RDS 内网地址的路由配置</li>
+<li>其他用户不会收到此路由配置，因此无法通过 VPN 访问内网 RDS</li>
+<li>所有连接尝试都被记录到日志文件，方便审计</li>
 </ol>
-<p>在学过并写过多种不同的语言后认识到：</p>
+<h3 id="3-3-验证配置效果"><a href="#3-3-验证配置效果" class="headerlink" title="3.3 验证配置效果"></a>3.3 验证配置效果</h3><p>当不同用户连接 VPN 时，<code>client-connect.log</code> 日志文件会记录不同的路由配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># 普通用户连接记录</span><br><span class="line">----------------------------------------</span><br><span class="line">2025-04-11 21:42:54 | yujianghua | /tmp/openvpn_cc_fde8421074b05294e17573fd0810e9a.tmp | No special routing applied</span><br><span class="line">[2025-04-11 21:42:54] Environment variables:</span><br><span class="line">common_name=yujianghua</span><br><span class="line">script_type=client-connect</span><br><span class="line">script_context=init</span><br><span class="line">username=yujianghua</span><br><span class="line">[2025-04-11 21:42:54] Config file content:</span><br><span class="line">----------------------------------------</span><br><span class="line"></span><br><span class="line"># 授权用户连接记录</span><br><span class="line">2025-04-11 22:07:02 | xingcy | /tmp/openvpn_cc_6d7bd9d7f217217afbf8ef016b73381.tmp | Added VPN route for 172.18.20.235</span><br><span class="line">[2025-04-11 22:07:02] Environment variables:</span><br><span class="line">common_name=xingcy</span><br><span class="line">script_type=client-connect</span><br><span class="line">script_context=init</span><br><span class="line">username=xingcy</span><br><span class="line">[2025-04-11 22:07:02] Config file content:</span><br><span class="line">push &quot;route 172.18.20.235 255.255.255.255 vpn_gateway&quot;</span><br><span class="line">----------------------------------------</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-路由表验证"><a href="#3-4-路由表验证" class="headerlink" title="3.4 路由表验证"></a>3.4 路由表验证</h3><p>使用 <code>netstat</code> 命令检查客户端路由表，可以看到授权用户和非授权用户的区别：</p>
+<p><strong>授权用户</strong>的路由表：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">(base) ➜  Downloads netstat -rn|grep 172.18</span><br><span class="line">172.18.20/24       10.0.10.1          UGSc            utun3  # 网段流量走 VPN</span><br><span class="line">172.18.20.235/32   10.0.10.1          UGSc            utun3  # RDS IP 流量也走 VPN</span><br></pre></td></tr></table></figure>
+
+<p><strong>非授权用户</strong>的路由表：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">(base) ➜  Downloads netstat -rn|grep 172.18</span><br><span class="line">172.18.20/24       10.0.10.1          UGSc            utun3  # 网段流量走 VPN</span><br><span class="line">172.18.20.235/32   192.168.110.1      UGSc            en0    # RDS IP 流量走本地网络接口</span><br></pre></td></tr></table></figure>
+
+<p>在非授权用户的路由表中，RDS IP 的流量会被导向本地网络接口（en0），而不是 VPN 接口（utun3），因此无法访问内网 RDS。</p>
+<h2 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h2><p>通过以上配置，我们成功实现了多层次的安全防护：</p>
 <ol>
-<li><p>无论使用哪种语言都是服务于业务，就像上面提到的，如果一个技术不能解决问题，那么这个技术就是一文不值。平时经常会在各种群或者论坛谈论程序员开发语言的鄙视链，我觉得其实每门语言都有自己实际的应用场景，没有最好的语言，只有最适合的语言。</p>
-</li>
-<li><p>若真的想在程序员这个行业大放异彩，还是需要修炼内功，所有的语言底层知识都是互通的。</p>
-</li>
+<li><strong>关闭了公网访问入口</strong>：移除 IP 白名单</li>
+<li><strong>阻断了通用 VPN 访问</strong>：通过路由规则控制</li>
+<li><strong>防止了跳板攻击</strong>：修改 DNS 解析</li>
+<li><strong>实现了精细权限控制</strong>：基于用户身份的动态路由配置</li>
 </ol>
-<p>在随着学的东西越来越多之后，就会有人讲知识灌输的多而杂，没什么卵用，有时也会因此焦虑，这就需要考虑自己的职业路径是向钻研性技术发展还是向业务型技术发展，目前我还是更加偏向于业务型发展路线，我理解的业务型发展路线是相对于钻研型技术发展路线来说，不会更加痴迷于某个技术实现原理，而是比较关注哪个技术能够更好的实现这个业务，为业务赋能，在技术层面更多的是吸取通用的编程思想，解决问题的思路，在遇到问题时能够解决问题。</p>
-<p>展望 2022</p>
-<p>要坚持锻炼身体，平时在各社交群组或各视频网站中时不时地会看到一些程序员体检发现 22 项异常、某程序员 997 猝死等类似标题，确实给我们敲响了警钟。锻炼身体并不需要占用大块的时间，晚上热热身，做做俯卧撑、深蹲活动活动身体各个关节，跑跑步等就可以了。最好也办张健身卡，办完每周必须得去一次<img src="https://cdn.learnku.com/uploads/images/202201/31/26846/yuxqSZyHcE.webp!large" alt="图片"></p>
-<p>要坚持不定期的发布博客或公众号，包括但不限于生活、技术或工作中遇到的难点，锻炼写文章水平，起初认为写一篇技术文章有什么难得，事实上，你也许会这个技术，但你不一定能够很好的将这个技术变成文字写出来，写出来别人也不一定能看懂，好的文章一定是通俗易懂。</p>
-<p>要多思考，观察身边的事物，要尽可能更多的去理解事件的底层逻辑，比如你接到了领导的任务要求你对接应用商店广告归因的功能，不能闷头就干，要理解为什么要这么做，它的商业模式是什么。当你理解它是通过广告主在应用商店投放广告，然后当用户点击了该广告会通知广告主该用户点击了这条广告，当该用户进入了 app 时广告主需要将该条消息上报给应用商店，应用商店通过越来越多的数据来学习应该如何精准的投放更容易下载并进入 app 的人群。就可以更好地思考如何设计一个健壮的系统。</p>
-<p>坚持每天给自己写日报，记录每天的工作动态，就是想记录一下，对自己的工作内容有个沉淀。</p>
-<p>学习理财，今年的基金跌得一塌糊涂，不过坚持长期投资主义，短期的波动影响不了我，忍住不哭<img src="https://cdn.learnku.com/uploads/images/202201/31/26846/9laH79X9kf.webp!large" alt="图片"></p>
-<p>因为疫情的原因，目前我也是被困在了杭州，这可能是我最恨疫情的一次吧，原有的计划都被突如其来的疫情打乱，希望中国疫情能够早日散去阴霾，大街上能够重新看到褪去口罩的日子。</p>
-<p>以上，写得有点乱，肚子里一点墨水都没有，想到哪里写到哪里，做个记录，也是希望能朝着心之所向的目标努力。</p>
-<p>最后，祝愿大家新年快乐，在新的一年，都能得到自己想要的。</p>
+<p>这种多层次的安全防护策略，可以有效应对凭证泄露的安全风险，确保即使数据库凭证泄露，也只有授权人员能够实际访问数据库。同时，通过完善的日志记录，也为安全审计提供了有力支持。</p>
+<p>在网络安全领域，这种”纵深防御”的思想非常重要 —— 不依赖单点安全措施，而是构建多层次、多角度的安全防护体系。</p>
 ]]></content>
+      <categories>
+        <category>技术笔记</category>
+        <category>网络配置</category>
+        <category>安全防护</category>
+      </categories>
       <tags>
-        <tag>程序员</tag>
+        <tag>OpenVPN</tag>
+        <tag>网络安全</tag>
+        <tag>RDS</tag>
+        <tag>数据库安全</tag>
       </tags>
   </entry>
 </search>
