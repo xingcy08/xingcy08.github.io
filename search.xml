@@ -1,6 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>AI 大模型的 Temperature 参数到底是干嘛用的，该怎么设置</title>
+    <url>/posts/14485740-c9ba-11ef-8cd8-0132e1306116/</url>
+    <content><![CDATA[<p>AI 大模型的 Temperature 参数是用来控制模型生成输出时的随机性和创造性的一个关键指标。具体来说，它调整的是生成结果的概率分布平滑度。</p>
+<h2 id="工作原理"><a href="#工作原理" class="headerlink" title="工作原理"></a>工作原理</h2><ul>
+<li>模型生成文本时，每个可能的词都有一个预测概率（由软最大值归一化生成）。</li>
+<li>Temperature 参数用于控制这个概率分布的尖锐程度或平滑程度：<ul>
+<li>低 Temperature（趋近 0）：<ul>
+<li>让分布更尖锐，模型会倾向于选择概率最高的词。</li>
+<li>结果更加确定性，输出更保守。</li>
+</ul>
+</li>
+<li>高 Temperature（&gt;1）：<ul>
+<li>让分布更平滑，模型有更高的几率选择低概率的词。</li>
+<li>结果更加随机，输出更具创造性。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>数学上，Temperature 会作用在预测概率上：</p>
+<p>其中 T 是 Temperature 参数。</p>
+<ul>
+<li>当 𝑇 → 0：会使最高概率的词占主导，结果变得更确定。</li>
+</ul>
+<h2 id="以下是关于其他AI大模型文档中关于各种请求参数的介绍"><a href="#以下是关于其他AI大模型文档中关于各种请求参数的介绍" class="headerlink" title="以下是关于其他AI大模型文档中关于各种请求参数的介绍"></a>以下是关于其他AI大模型文档中关于各种请求参数的介绍</h2><ul>
+<li><a href="https://platform.moonshot.cn/docs/api/chat#%E5%AD%97%E6%AE%B5%E8%AF%B4%E6%98%8E">Moonshot AI</a></li>
+<li><a href="https://api-docs.deepseek.com/zh-cn/quick_start/parameter_settings">DeepSeek API 文档</a></li>
+</ul>
+]]></content>
+  </entry>
+  <entry>
+    <title>Docker系列 Uptime Kuma监测网站连通性</title>
+    <url>/posts/20307130-5dc9-11ef-82fe-57bc654d1967/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>上周六上午出了一个事故，核心业务接口挂了2个小时没人知道，直到看到数据后不对劲经排查才发现是接口挂了导致的。</p>
+<p>然后赶紧启动服务，随后开始查询问题出在哪里，先是看 Nginx 日志发现很大，Nginx 被错误日志打到有45个G，直接 vim 压根打不开。</p>
+<p>然后根据 <code>split -b 1G nginx.error.log errLog_</code> 命令把错误日志按每个文件 <code>1G</code> 来分割成了45个文件，方便查看日志排查问题。<br><img src="/../images/posts/20307130-5dc9-11ef-82fe-57bc654d1967/WX20240819-221139@2x.png" alt="WX20240819-221139@2x.png"><img src="/images/posts/20307130-5dc9-11ef-82fe-57bc654d1967/!%5BWX20240819-221139@2x.png%5D(../images/posts/20307130-5dc9-11ef-82fe-57bc654d1967/WX20240819-221139@2x.png)"></p>
+<p><code>vim</code> 最早的 <code>errLog_aa</code> 文件发现其中最早的报错是 <code>upstream prematurely closed connection while reading response header from upstream</code></p>
+<p>这个报错可能是由于数据量突增导致的，然后发现确实从周五开始请求量和数据量突增，加上是单台机器导致了服务被打挂。</p>
+<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><h3 id="加机器"><a href="#加机器" class="headerlink" title="加机器"></a>加机器</h3><p>首先肯定是加机器来分摊压力，用 Nginx 部署负载均衡</p>
+<h3 id="接口状态监控"><a href="#接口状态监控" class="headerlink" title="接口状态监控"></a>接口状态监控</h3><p>其次是要找一个可以监控接口状态的，如果说接口挂了可以发邮件被动知晓的，又不想很重的。</p>
+<p>就找到了本次讲的 <code>uptime-kuma</code>。</p>
+<p><code>uptime-kuma</code> 支持监控 <code>https</code> 接口的响应码，并可以配置在异常状态的情况下发邮件或飞书等等渠道通知到你。</p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>这里使用 <code>docker-compose</code> 来安装，文件内容如下</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&#x27;3.3&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">uptime-kuma:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">louislam/uptime-kuma:1</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">uptime-kuma</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./uptime-kuma-data:/app/data</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;3001:3001&quot;</span>  <span class="comment"># &lt;Host Port&gt;:&lt;Container Port&gt;</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">always</span></span><br></pre></td></tr></table></figure>
+
+<p>然后执行 <code>docker-compose up -d</code> 命令，正常的话容器就会启动起来。</p>
+<p><img src="/../images/posts/20307130-5dc9-11ef-82fe-57bc654d1967/img_1.png"></p>
+<p>功能很简单，点击添加监控项可以监控你想要的，这里就不赘述了。</p>
+<h2 id="通知"><a href="#通知" class="headerlink" title="通知"></a>通知</h2><p>其实这个网站部署后基本也不会自己主动来看，我们需要被动的接收告警，</p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://blognas.hwb0307.com/linux/docker/4939">Docker系列 Uptime Kuma监测网站连通性</a><br><a href="https://www.neko7ina.com/3pYN3eLUSMZFvQ.html">使用 Uptime Kuma 监测网站可用性</a><br><a href="https://www.cnblogs.com/rainbond/p/18260539">从 Docker Hub 拉取镜像受阻？这些解决方案帮你轻松应对</a></p>
+]]></content>
+  </entry>
+  <entry>
     <title>Java 常用命令</title>
     <url>/posts/0df114f0-5551-11ef-979b-ffc422e386b2/</url>
     <content><![CDATA[<h2 id="查看-Java-版本"><a href="#查看-Java-版本" class="headerlink" title="查看 Java 版本"></a>查看 Java 版本</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">➜  ~ java -version</span><br><span class="line">openjdk version &quot;1.8.0_275&quot;</span><br><span class="line">OpenJDK Runtime Environment (Zulu 8.50.0.1017-CA-macos-aarch64) (build 1.8.0_275-b01)</span><br><span class="line">OpenJDK 64-Bit Server VM (Zulu 8.50.0.1017-CA-macos-aarch64) (build 25.275-b01, mixed mode)</span><br></pre></td></tr></table></figure>
@@ -72,6 +125,24 @@
       </tags>
   </entry>
   <entry>
+    <title>SpringBoot 3.4.3 引入 Nacos</title>
+    <url>/posts/f70111e0-fbf0-11ef-bf15-9b6c9eaca0e7/</url>
+    <content><![CDATA[<h2 id="安装-Nacos"><a href="#安装-Nacos" class="headerlink" title="安装 Nacos"></a>安装 Nacos</h2><p><a href="https://nacos.io/docs/latest/quickstart/quick-start/?spm=5238cd80.381747ab.0.0.488d5368Cj5EOP">查看官网手册</a></p>
+<h2 id="SpringBoot-引入-Nacos"><a href="#SpringBoot-引入-Nacos" class="headerlink" title="SpringBoot 引入 Nacos"></a>SpringBoot 引入 Nacos</h2><h3 id="1-添加依赖"><a href="#1-添加依赖" class="headerlink" title="1. 添加依赖"></a>1. 添加依赖</h3><p>在 <code>pom.xml</code> 中添加以下依赖（兼容 Spring Boot 3.4.3）：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.cloud<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-cloud-alibaba-dependencies<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>2023.0.1.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">type</span>&gt;</span>pom<span class="tag">&lt;/<span class="name">type</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">scope</span>&gt;</span>import<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-alibaba-nacos-discovery --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.cloud<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-cloud-starter-alibaba-nacos-discovery<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>2023.0.1.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-alibaba-nacos-config --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.cloud<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-cloud-starter-alibaba-nacos-config<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>2023.0.1.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-配置-Nacos-连接信息"><a href="#2-配置-Nacos-连接信息" class="headerlink" title="2. 配置 Nacos 连接信息"></a>2. 配置 Nacos 连接信息</h3><p>在 <code>application.yml</code> 或 <code>bootstrap.yml</code> 中添加配置：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">application:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">demo</span></span><br><span class="line">  <span class="attr">cloud:</span></span><br><span class="line">    <span class="comment"># Spring Boot [3.4.3] 与此 Spring Cloud 发布版本不兼容</span></span><br><span class="line">    <span class="comment"># 如果您想禁用此检查，只需设置属性 [spring.cloud.compatibility-verifier.enabled=false]</span></span><br><span class="line">    <span class="attr">compatibility-verifier:</span></span><br><span class="line">      <span class="attr">enabled:</span> <span class="literal">false</span></span><br><span class="line">    <span class="attr">nacos:</span></span><br><span class="line">      <span class="attr">discovery:</span></span><br><span class="line">        <span class="attr">server-addr:</span> <span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span><span class="string">:8848</span>  <span class="comment"># Nacos 服务地址‌</span></span><br><span class="line">        <span class="attr">namespace:</span> <span class="string">public</span>  <span class="comment"># 可选：命名空间（默认public）</span></span><br><span class="line">        <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">config:</span></span><br><span class="line">        <span class="attr">server-addr:</span> <span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span><span class="string">:8848</span>  <span class="comment"># 配置中心地址（若需使用）</span></span><br><span class="line">        <span class="attr">file-extension:</span> <span class="string">yaml</span>         <span class="comment"># 配置文件格式‌</span></span><br><span class="line">        <span class="attr">import-check:</span></span><br><span class="line">          <span class="attr">enabled:</span> <span class="literal">false</span></span><br><span class="line">        <span class="attr">enabled:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>SpringBoot</tag>
+        <tag>Nacos</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SpringBoot 接口参数解密的实现方法（使用注解）</title>
     <url>/posts/f3e5bb90-5601-11ef-8472-43c66388e441/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在 App 开发中，为了防止开发者轻易通过抓包获取到接口请求数据和响应数据，我们会对请求参数进行加密，后端通过解密获取，并加密返回给客户端，客户端通过解密获取。</p>
@@ -99,6 +170,42 @@
       <tags>
         <tag>Java</tag>
         <tag>SpringBoot</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Vercel绑定自定义域名</title>
+    <url>/posts/bc20b0b0-5fd0-11ef-9b17-ff9b5f62feb2/</url>
+    <content><![CDATA[<blockquote>
+<p>❓为什么要绑定自定义域名？</p>
+<p>vercel默认提供的域名 *.vercel.app 由于滥用已被大陆屏蔽（DNS污染），如果需要在国内能访问到您的站点，请绑定一个新的域名即可</p>
+</blockquote>
+<h2 id="准备一个域名"><a href="#准备一个域名" class="headerlink" title="准备一个域名"></a>准备一个域名</h2><p>首先购买自己的域名，您可以选择以下渠道进行购买：</p>
+<ul>
+<li>腾讯云</li>
+<li>阿里云</li>
+</ul>
+<p>这里就不赘述了，域名买好然后备案好</p>
+<h2 id="Vercel控制台配置"><a href="#Vercel控制台配置" class="headerlink" title="Vercel控制台配置"></a>Vercel控制台配置</h2><ul>
+<li><p>在Vercel控制面板中找到 <code>Setting</code>→<code>Domains</code>→<code>Add</code>，在这里可以指定当前项目的绑定域名，一个项目可以绑定多个域名。<br><img src="/../images/posts/bc20b0b0-5fd0-11ef-9b17-ff9b5f62feb2/img.png" alt="img.png"></p>
+</li>
+<li><p>输入域名,并Add之后，如果看到下图中的提示（Invalid Configuration）👇, 说明域名已经添加，但需要根据提示添加CNAME或Nameserver的方式激活它，图中所示是要在域名后台添加一条CNAME类型的解析，参数名blog1，值为cname.vercel-dns.com。<br><img src="/../images/posts/bc20b0b0-5fd0-11ef-9b17-ff9b5f62feb2/img_1.png" alt="img.png"></p>
+</li>
+</ul>
+<p>这里推荐使用CNAME绑定。请按文档后续步骤配置对应的Cname解析。</p>
+<h2 id="配置CNAME解析"><a href="#配置CNAME解析" class="headerlink" title="配置CNAME解析"></a>配置CNAME解析</h2><p>以下分多个平台举例，配置方法大同小异，只是入口不太一样，我这里主要讲阿里云的配置方法</p>
+<p>打开控制台 <a href="https://dc.console.aliyun.com/#/domain-list/all">https://dc.console.aliyun.com/#/domain-list/all</a>  域名列表，点击解析，并添加一条cname转发<br><img src="/../images/posts/bc20b0b0-5fd0-11ef-9b17-ff9b5f62feb2/img_2.png" alt="img.png"></p>
+<p><img src="/../images/posts/bc20b0b0-5fd0-11ef-9b17-ff9b5f62feb2/img_3.png" alt="img.png"></p>
+<h2 id="完成"><a href="#完成" class="headerlink" title="完成"></a>完成</h2><p>如果域名服务配置正常，Vercel的卡片会变成如图的样子：<br><img src="/../images/posts/bc20b0b0-5fd0-11ef-9b17-ff9b5f62feb2/img_4.png" alt="img.png"></p>
+<blockquote>
+<p>接下来就可以通过设置的域名（如 <a href="https://blog.xingcy.top/">https://blog.xingcy.top</a> ）访问我们的网站了</p>
+</blockquote>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://docs.tangly1024.com/article/vercel-domain">https://docs.tangly1024.com/article/vercel-domain</a></p>
+]]></content>
+      <categories>
+        <category>Vercel</category>
+      </categories>
+      <tags>
+        <tag>Vercel</tag>
       </tags>
   </entry>
   <entry>
@@ -155,6 +262,24 @@
       <tags>
         <tag>读书</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>云服务器其中一台服务器和另外几台互相ping不通的问题排查</title>
+    <url>/posts/084d93e0-b760-11ef-8ac0-bd6a9d46898f/</url>
+    <content><![CDATA[<h2 id="现象描述"><a href="#现象描述" class="headerlink" title="现象描述"></a>现象描述</h2><p>我们在阿里云上有 12 台服务器，其中 2 台服务器是部署了 <code>doris</code> 服务，内网IP（172.21.212.227，172.21.212.225），还有一台后台服务器内网IP（172.18.20.233），目前发现后台服务器和那两台 <code>doris</code> 服务器互相 <code>ping</code> 不通，其余的服务器都能和 <code>doris</code> 互相 <code>ping</code> 通。这说明肯定是后台服务器的设置问题。</p>
+<h2 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h2><p>从 <code>IP</code> 可以看到两台 <code>doris</code> 服务和后台服务器的网段不一样，一个是 <code>21</code>，一个是 <code>18</code>。</p>
+<p>先使用 <code>route -n</code> 看一下路由表</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br></pre></td></tr></table></figure>
+<p>发现 <code>172.21</code> 网段并不是走的 <code>eth0</code> 网卡，而是走的 <code>br-c4032e08166c</code> 网卡，这就是为什么 <code>ping</code> 不通的问题所在。</p>
+<p>我们手动来添加两条路由</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.227  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.225  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br><span class="line">172.21.212.225  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br><span class="line">172.21.212.227  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br></pre></td></tr></table></figure>
+
+<p>这个时候在去 <code>ping</code> 两台 <code>doris</code> 服务，发现就没问题了。</p>
+<h2 id="服务器重启后-route-丢失"><a href="#服务器重启后-route-丢失" class="headerlink" title="服务器重启后 route 丢失"></a>服务器重启后 <code>route</code> 丢失</h2><p>刚才执行的 <code>route add</code> 当服务器重启后就需要重新执行了，有多种方法可以将该命令持久化保存，我选择了使用 <code>crontab</code> 来监听服务器重启的事件，先使用 <code>crontab -e</code> 打开定时任务配置文件，然后添加如下内容:</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">@reboot route add -host 172.21.212.227 gw 172.18.31.253 dev eth0</span><br><span class="line">@reboot route add -host 172.21.212.225 gw 172.18.31.253 dev eth0</span><br></pre></td></tr></table></figure>
+
+<p>以上在服务器重启后就会自动把这两条路由加上</p>
+]]></content>
   </entry>
   <entry>
     <title>又传来猝死消息，生命只有一次</title>
