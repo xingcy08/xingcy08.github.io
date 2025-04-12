@@ -54,6 +54,171 @@
 ]]></content>
   </entry>
   <entry>
+    <title>ElasticSearch ClickHouse Doris 三个数据库的区别</title>
+    <url>/posts/a7951530-1760-11f0-942e-8f3a36fb8a65/</url>
+    <content><![CDATA[<h1 id="ElasticSearch、ClickHouse、Doris三大数据库深度对比"><a href="#ElasticSearch、ClickHouse、Doris三大数据库深度对比" class="headerlink" title="ElasticSearch、ClickHouse、Doris三大数据库深度对比"></a>ElasticSearch、ClickHouse、Doris三大数据库深度对比</h1><blockquote>
+<p>Elasticsearch、ClickHouse、Doris是三种不同定位的数据库，分别针对特定场景优化。本文对三者进行深度对比分析，帮助您根据业务需求选择最合适的解决方案。</p>
+</blockquote>
+<h2 id="基础架构对比"><a href="#基础架构对比" class="headerlink" title="基础架构对比"></a>基础架构对比</h2><table>
+<thead>
+<tr>
+<th>数据库</th>
+<th>定位</th>
+<th>存储模型</th>
+<th>架构特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Elasticsearch</strong></td>
+<td>分布式搜索和分析引擎</td>
+<td>文档型（JSON）</td>
+<td>分片+倒排索引</td>
+<td>全文检索、日志分析</td>
+</tr>
+<tr>
+<td><strong>ClickHouse</strong></td>
+<td>列式OLAP数据库</td>
+<td>列式存储</td>
+<td>向量化执行引擎</td>
+<td>海量数据高速分析</td>
+</tr>
+<tr>
+<td><strong>Apache Doris</strong></td>
+<td>MPP架构实时数仓</td>
+<td>列式存储</td>
+<td>兼容MySQL协议</td>
+<td>企业实时报表、多表关联</td>
+</tr>
+</tbody></table>
+<h2 id="1-Elasticsearch详解"><a href="#1-Elasticsearch详解" class="headerlink" title="1. Elasticsearch详解"></a>1. Elasticsearch详解</h2><h3 id="核心优势"><a href="#核心优势" class="headerlink" title="核心优势"></a>核心优势</h3><ul>
+<li>全文检索</li>
+<li>复杂条件过滤</li>
+<li>实时分析（非结构化数据）</li>
+</ul>
+<h3 id="典型应用场景"><a href="#典型应用场景" class="headerlink" title="典型应用场景"></a>典型应用场景</h3><ul>
+<li><strong>日志分析</strong>：ELK Stack生态（Elasticsearch + Logstash + Kibana）</li>
+<li><strong>全文搜索</strong>：电商平台商品搜索、内容网站检索</li>
+<li><strong>高维数据聚合</strong>：用户行为分析、地理位置服务</li>
+</ul>
+<h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>强大的全文检索能力（支持模糊匹配、高亮显示等高级搜索功能）</li>
+<li>优秀的近实时（NRT）搜索响应速度</li>
+<li>灵活的Schema设计（支持动态字段增减）</li>
+<li>丰富的聚合分析功能</li>
+<li>完善的分布式特性（水平扩展能力强）</li>
+</ul>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li>写入吞吐量较低（相比专业OLAP引擎）</li>
+<li>存储成本高（默认副本机制占用额外空间）</li>
+<li>不适合大规模数值分析（如万亿级数据JOIN操作）</li>
+<li>内存占用较大（性能优化依赖较多内存）</li>
+</ul>
+<h2 id="2-ClickHouse详解"><a href="#2-ClickHouse详解" class="headerlink" title="2. ClickHouse详解"></a>2. ClickHouse详解</h2><h3 id="核心优势-1"><a href="#核心优势-1" class="headerlink" title="核心优势"></a>核心优势</h3><ul>
+<li>极致查询速度</li>
+<li>高吞吐写入</li>
+<li>低成本存储</li>
+</ul>
+<h3 id="典型应用场景-1"><a href="#典型应用场景-1" class="headerlink" title="典型应用场景"></a>典型应用场景</h3><ul>
+<li><strong>实时日志&#x2F;埋点分析</strong>：单表千亿级数据秒级查询</li>
+<li><strong>用户行为分析</strong>：漏斗分析、留存计算</li>
+<li><strong>时序数据</strong>：监控指标、IoT传感器数据处理</li>
+</ul>
+<h3 id="优点-1"><a href="#优点-1" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>单表查询性能极强（列存+向量化执行引擎）</li>
+<li>超高压缩比（通常10:1以上，大幅节省存储成本）</li>
+<li>支持实时数据插入和高效批量导入</li>
+<li>适合高吞吐的聚合查询（如SUM&#x2F;COUNT&#x2F;AVG）</li>
+<li>丰富的专用数据类型和函数（如Array、Tuple、Map等）</li>
+</ul>
+<h3 id="缺点-1"><a href="#缺点-1" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li>不适合高频更新&#x2F;删除操作（LSM树结构，更新成本高）</li>
+<li>多表JOIN性能较差（设计理念上建议避免JOIN）</li>
+<li>并发查询能力有限（默认适合少量大查询而非高并发场景）</li>
+<li>运维复杂度较高（配置调优需专业知识）</li>
+</ul>
+<h2 id="3-Apache-Doris详解"><a href="#3-Apache-Doris详解" class="headerlink" title="3. Apache Doris详解"></a>3. Apache Doris详解</h2><h3 id="核心优势-2"><a href="#核心优势-2" class="headerlink" title="核心优势"></a>核心优势</h3><ul>
+<li>平衡查询性能与易用性</li>
+<li>支持高并发查询</li>
+<li>SQL兼容性好</li>
+</ul>
+<h3 id="典型应用场景-2"><a href="#典型应用场景-2" class="headerlink" title="典型应用场景"></a>典型应用场景</h3><ul>
+<li><strong>企业级实时数仓</strong>：替代传统Hive+Impala架构</li>
+<li><strong>高并发报表</strong>：直接对接各类BI工具</li>
+<li><strong>需要兼顾实时写入和查询的分析场景</strong></li>
+</ul>
+<h3 id="优点-2"><a href="#优点-2" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>完全支持标准SQL（兼容MySQL协议，学习成本低）</li>
+<li>优秀的高并发查询能力（优于ClickHouse的并发表现）</li>
+<li>支持实时微批导入（Kafka&#x2F;Routine Load机制）</li>
+<li>良好的多表JOIN性能（优于ClickHouse）</li>
+<li>简化的运维体验（自动均衡、故障恢复）</li>
+</ul>
+<h3 id="缺点-2"><a href="#缺点-2" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li>社区生态相对较新（成熟度低于ES&#x2F;ClickHouse）</li>
+<li>超大规模数据（PB级）性能略弱于ClickHouse</li>
+<li>部分高级功能仍在完善中</li>
+</ul>
+<h2 id="选型决策指南"><a href="#选型决策指南" class="headerlink" title="选型决策指南"></a>选型决策指南</h2><h3 id="决策树"><a href="#决策树" class="headerlink" title="决策树"></a>决策树</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">是否需要全文检索？</span><br><span class="line">├── 是 → Elasticsearch</span><br><span class="line">└── 否 → 继续评估</span><br><span class="line"></span><br><span class="line">数据规模和查询模式？</span><br><span class="line">├── 单表千亿级+高吞吐分析 → ClickHouse</span><br><span class="line">└── 多表关联+高并发查询 → Doris</span><br><span class="line"></span><br><span class="line">实时性要求？</span><br><span class="line">├── 需要实时写入+高并发查询 → Doris</span><br><span class="line">└── 批量导入+低并发大查询 → ClickHouse</span><br></pre></td></tr></table></figure>
+
+<h3 id="典型场景示例"><a href="#典型场景示例" class="headerlink" title="典型场景示例"></a>典型场景示例</h3><table>
+<thead>
+<tr>
+<th>业务场景</th>
+<th>推荐选择</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>电商搜索</strong></td>
+<td>Elasticsearch</td>
+<td>商品标题、描述全文检索，模糊匹配能力强</td>
+</tr>
+<tr>
+<td><strong>广告点击流分析</strong></td>
+<td>ClickHouse</td>
+<td>单表千亿级点击日志快速聚合，压缩比高</td>
+</tr>
+<tr>
+<td><strong>企业级报表平台</strong></td>
+<td>Doris</td>
+<td>多表关联+100+并发查询，SQL兼容性好</td>
+</tr>
+<tr>
+<td><strong>日志监控分析</strong></td>
+<td>ES或ClickHouse</td>
+<td>需全文检索用ES，纯指标统计用ClickHouse</td>
+</tr>
+<tr>
+<td><strong>用户画像分析</strong></td>
+<td>Doris</td>
+<td>多维表关联+实时更新，兼具性能和灵活性</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li><p><strong>Elasticsearch</strong>：搜索引擎之王，全文检索和模糊匹配场景的首选，适合非结构化数据处理。</p>
+</li>
+<li><p><strong>ClickHouse</strong>：OLAP性能之王，单表海量数据分析的不二之选，适合低延迟聚合查询。</p>
+</li>
+<li><p><strong>Apache Doris</strong>：实用主义者的平衡之选，适合企业级数仓，需要SQL兼容性和高并发的场景。</p>
+</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="https://www.elastic.co/guide/index.html">Elasticsearch 官方文档</a></li>
+<li><a href="https://clickhouse.com/docs/">ClickHouse 官方文档</a></li>
+<li><a href="https://doris.apache.org/docs/">Apache Doris 官方文档</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术分析</category>
+      </categories>
+      <tags>
+        <tag>数据库</tag>
+        <tag>大数据</tag>
+        <tag>OLAP</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Java 常用命令</title>
     <url>/posts/0df114f0-5551-11ef-979b-ffc422e386b2/</url>
     <content><![CDATA[<h2 id="查看-Java-版本"><a href="#查看-Java-版本" class="headerlink" title="查看 Java 版本"></a>查看 Java 版本</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">➜  ~ java -version</span><br><span class="line">openjdk version &quot;1.8.0_275&quot;</span><br><span class="line">OpenJDK Runtime Environment (Zulu 8.50.0.1017-CA-macos-aarch64) (build 1.8.0_275-b01)</span><br><span class="line">OpenJDK 64-Bit Server VM (Zulu 8.50.0.1017-CA-macos-aarch64) (build 25.275-b01, mixed mode)</span><br></pre></td></tr></table></figure>
@@ -74,8 +239,8 @@
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>今天在新的服务器上搭建 <code>Java</code> 环境，从 <code>Oracle</code> 官网上下载了最新的 <code>jdk</code> 版本 <code>1.8.0_311</code>，然后上传到服务器 <code>jar</code> 包，启动 <code>jar</code> 包，这些常规操作。本以为这个项目搭建就此结束，但是当测试提现功能时，服务器突然报错：<code>No appropriate protocol (protocol is disabled or cipher suites are inappropr</code></p>
 <h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>首先排查了下微信商户号、支付参数等是否有误，但若参数有误的话微信会直接返回相应错误，所以不是该问题。</p>
 <p>然后将思路转移到是否是环境问题，则确认了一下之前的服务器上的 <code>jdk</code> 版本和当前服务器 <code>jdk</code> 版本是否一致，因为下载的是最新的，所以已经不一致了</p>
-<p>可以提现的服务器 <code>jdk</code> 版本是 <code>212</code><br><img src="https://cdn.learnku.com/uploads/images/202112/01/26846/Y8RDUrD502.png!large"></p>
-<p>当前服务器 <code>jdk</code> 版本是 <code>311</code><br><img src="https://cdn.learnku.com/uploads/images/202112/01/26846/dHiYCKkTVX.png!large"></p>
+<p>可以提现的服务器 <code>jdk</code> 版本是 <code>212</code></p>
+<p>当前服务器 <code>jdk</code> 版本是 <code>311</code></p>
 <p>经翻阅互联网文章发现 <code>Java8-291</code> 之后 , 禁用了 <code>TLS1.1</code>, 而我们安装的是 <code>java8-311</code>。并且该禁用该参数会导致微信提现报错，所以我们需要放开该限制。</p>
 <h2 id="修改-java-security-文件"><a href="#修改-java-security-文件" class="headerlink" title="修改 java.security 文件"></a>修改 java.security 文件</h2><p>首先找到安装 java 的目录，如果忘记可以通过环境变量中配置的查看<br>环境变量文件在 <code>etc/profile</code><br>我的环境变量文件如下：</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">Java</span></span><br><span class="line">export JAVA_HOME=/usr/local/java</span><br><span class="line">export PATH=$PATH:$JAVA_HOME/bin</span><br><span class="line">export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar</span><br><span class="line">export JRE_HOME=$JAVA_HOME/jre</span><br></pre></td></tr></table></figure>
@@ -244,24 +409,6 @@
       </tags>
   </entry>
   <entry>
-    <title>云服务器其中一台服务器和另外几台互相ping不通的问题排查</title>
-    <url>/posts/084d93e0-b760-11ef-8ac0-bd6a9d46898f/</url>
-    <content><![CDATA[<h2 id="现象描述"><a href="#现象描述" class="headerlink" title="现象描述"></a>现象描述</h2><p>我们在阿里云上有 12 台服务器，其中 2 台服务器是部署了 <code>doris</code> 服务，内网IP（172.21.212.227，172.21.212.225），还有一台后台服务器内网IP（172.18.20.233），目前发现后台服务器和那两台 <code>doris</code> 服务器互相 <code>ping</code> 不通，其余的服务器都能和 <code>doris</code> 互相 <code>ping</code> 通。这说明肯定是后台服务器的设置问题。</p>
-<h2 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h2><p>从 <code>IP</code> 可以看到两台 <code>doris</code> 服务和后台服务器的网段不一样，一个是 <code>21</code>，一个是 <code>18</code>。</p>
-<p>先使用 <code>route -n</code> 看一下路由表</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br></pre></td></tr></table></figure>
-<p>发现 <code>172.21</code> 网段并不是走的 <code>eth0</code> 网卡，而是走的 <code>br-c4032e08166c</code> 网卡，这就是为什么 <code>ping</code> 不通的问题所在。</p>
-<p>我们手动来添加两条路由</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.227  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.225  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br><span class="line">172.21.212.225  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br><span class="line">172.21.212.227  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br></pre></td></tr></table></figure>
-
-<p>这个时候在去 <code>ping</code> 两台 <code>doris</code> 服务，发现就没问题了。</p>
-<h2 id="服务器重启后-route-丢失"><a href="#服务器重启后-route-丢失" class="headerlink" title="服务器重启后 route 丢失"></a>服务器重启后 <code>route</code> 丢失</h2><p>刚才执行的 <code>route add</code> 当服务器重启后就需要重新执行了，有多种方法可以将该命令持久化保存，我选择了使用 <code>crontab</code> 来监听服务器重启的事件，先使用 <code>crontab -e</code> 打开定时任务配置文件，然后添加如下内容:</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">@reboot route add -host 172.21.212.227 gw 172.18.31.253 dev eth0</span><br><span class="line">@reboot route add -host 172.21.212.225 gw 172.18.31.253 dev eth0</span><br></pre></td></tr></table></figure>
-
-<p>以上在服务器重启后就会自动把这两条路由加上</p>
-]]></content>
-  </entry>
-  <entry>
     <title>《底层逻辑》读后感</title>
     <url>/posts/f99e2830-556e-11ef-b5b0-e3aaa920b5b0/</url>
     <content><![CDATA[<p>这是 2022 年读的第一本书，《底层逻辑》，这本书读了有 6 个小时左右（微信读书 App 记录的时间），从什么时候开始读的忘记了，下本书应该记录一下从什么时候开始读的。这也是第一次写读后感，也不知道怎么落笔，就简单的先从介绍下这本书的内容，到我读这本书的感受，到最后读完这本书有什么感想按照这样的顺序来说吧。</p>
@@ -280,6 +427,24 @@
       <tags>
         <tag>读书</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>云服务器其中一台服务器和另外几台互相ping不通的问题排查</title>
+    <url>/posts/084d93e0-b760-11ef-8ac0-bd6a9d46898f/</url>
+    <content><![CDATA[<h2 id="现象描述"><a href="#现象描述" class="headerlink" title="现象描述"></a>现象描述</h2><p>我们在阿里云上有 12 台服务器，其中 2 台服务器是部署了 <code>doris</code> 服务，内网IP（172.21.212.227，172.21.212.225），还有一台后台服务器内网IP（172.18.20.233），目前发现后台服务器和那两台 <code>doris</code> 服务器互相 <code>ping</code> 不通，其余的服务器都能和 <code>doris</code> 互相 <code>ping</code> 通。这说明肯定是后台服务器的设置问题。</p>
+<h2 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h2><p>从 <code>IP</code> 可以看到两台 <code>doris</code> 服务和后台服务器的网段不一样，一个是 <code>21</code>，一个是 <code>18</code>。</p>
+<p>先使用 <code>route -n</code> 看一下路由表</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br></pre></td></tr></table></figure>
+<p>发现 <code>172.21</code> 网段并不是走的 <code>eth0</code> 网卡，而是走的 <code>br-c4032e08166c</code> 网卡，这就是为什么 <code>ping</code> 不通的问题所在。</p>
+<p>我们手动来添加两条路由</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.227  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route add -host 172.21.212.225  gw 172.18.31.253 dev eth0</span><br><span class="line">[root@iZbp15ykl21vqt34uyqcolZ ~]# route -n</span><br><span class="line">Kernel IP routing table</span><br><span class="line">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface</span><br><span class="line">0.0.0.0         172.18.31.253   0.0.0.0         UG    0      0        0 eth0</span><br><span class="line">10.174.215.0    0.0.0.0         255.255.255.0   U     0      0        0 zt4gtrv3qc</span><br><span class="line">169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0</span><br><span class="line">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0</span><br><span class="line">172.18.16.0     0.0.0.0         255.255.240.0   U     0      0        0 eth0</span><br><span class="line">172.19.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-369b6c9500eb</span><br><span class="line">172.20.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-82b231ecd0f4</span><br><span class="line">172.21.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c4032e08166c</span><br><span class="line">172.21.212.225  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br><span class="line">172.21.212.227  172.18.31.253   255.255.255.255 UGH   0      0        0 eth0</span><br></pre></td></tr></table></figure>
+
+<p>这个时候在去 <code>ping</code> 两台 <code>doris</code> 服务，发现就没问题了。</p>
+<h2 id="服务器重启后-route-丢失"><a href="#服务器重启后-route-丢失" class="headerlink" title="服务器重启后 route 丢失"></a>服务器重启后 <code>route</code> 丢失</h2><p>刚才执行的 <code>route add</code> 当服务器重启后就需要重新执行了，有多种方法可以将该命令持久化保存，我选择了使用 <code>crontab</code> 来监听服务器重启的事件，先使用 <code>crontab -e</code> 打开定时任务配置文件，然后添加如下内容:</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">@reboot route add -host 172.21.212.227 gw 172.18.31.253 dev eth0</span><br><span class="line">@reboot route add -host 172.21.212.225 gw 172.18.31.253 dev eth0</span><br></pre></td></tr></table></figure>
+
+<p>以上在服务器重启后就会自动把这两条路由加上</p>
+]]></content>
   </entry>
   <entry>
     <title>又传来猝死消息，生命只有一次</title>
@@ -351,7 +516,7 @@
       </tags>
   </entry>
   <entry>
-    <title>记一次 OpenVPN 配置场景问题</title>
+    <title>记一次 OpenVPN 配置解决 RDS 安全问题</title>
     <url>/posts/d824f3a0-16d9-11f0-be1c-9719f9c88803/</url>
     <content><![CDATA[<h1 id="记一次-OpenVPN-配置解决-RDS-安全问题"><a href="#记一次-OpenVPN-配置解决-RDS-安全问题" class="headerlink" title="记一次 OpenVPN 配置解决 RDS 安全问题"></a>记一次 OpenVPN 配置解决 RDS 安全问题</h1><h2 id="1-问题背景"><a href="#1-问题背景" class="headerlink" title="1. 问题背景"></a>1. 问题背景</h2><p>出于某些原因，线上 RDS 数据库的访问凭证（用户名密码）泄露到了公司内部。这导致了几个潜在的安全隐患：</p>
 <ol>
