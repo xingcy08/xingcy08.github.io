@@ -290,6 +290,145 @@
       </tags>
   </entry>
   <entry>
+    <title>RabbitMQ 4.x 入门指南：从小白到消息队列实践者</title>
+    <url>/posts/d385c880-1817-11f0-aba7-83281f31a4c4/</url>
+    <content><![CDATA[<h1 id="RabbitMQ入门指南"><a href="#RabbitMQ入门指南" class="headerlink" title="RabbitMQ入门指南"></a>RabbitMQ入门指南</h1><h2 id="什么是RabbitMQ？"><a href="#什么是RabbitMQ？" class="headerlink" title="什么是RabbitMQ？"></a>什么是RabbitMQ？</h2><p>RabbitMQ是一个开源的消息代理和队列服务器，它实现了高级消息队列协议(AMQP)，用于在分布式系统中存储和转发消息。简单来说，它就像一个高效的邮局，负责接收、存储和分发应用程序之间的消息。</p>
+<blockquote>
+<p><strong>生活场景类比</strong>：当你在电商网站下单后，系统需要做很多事情——减库存、发邮件通知、生成订单、更新用户积分等等。如果这些操作都在用户点击”提交订单”时同步执行，用户可能需要等待很久。而使用RabbitMQ，主程序只需要发送一条”用户下单了”的消息，其他服务可以异步处理各自的任务，大大提高了系统响应速度。</p>
+</blockquote>
+<h2 id="RabbitMQ的优缺点"><a href="#RabbitMQ的优缺点" class="headerlink" title="RabbitMQ的优缺点"></a>RabbitMQ的优缺点</h2><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul>
+<li><strong>可靠性</strong>：支持消息持久化、传输确认和发布确认，确保消息不丢失</li>
+<li><strong>灵活的路由</strong>：通过Exchange实现多种消息路由方式</li>
+<li><strong>扩展性</strong>：支持集群部署，轻松应对高并发</li>
+<li><strong>多语言支持</strong>：几乎支持所有主流编程语言</li>
+<li><strong>管理界面</strong>：提供友好的Web管理界面</li>
+</ul>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li><strong>学习曲线</strong>：概念较多，初学者需要时间理解</li>
+<li><strong>性能</strong>：相比Kafka等系统，在超高吞吐量场景下表现稍弱</li>
+<li><strong>配置复杂</strong>：高级功能需要较多配置</li>
+</ul>
+<h2 id="RabbitMQ核心概念"><a href="#RabbitMQ核心概念" class="headerlink" title="RabbitMQ核心概念"></a>RabbitMQ核心概念</h2><h3 id="基础组件"><a href="#基础组件" class="headerlink" title="基础组件"></a>基础组件</h3><ol>
+<li><p><strong>Producer（生产者）</strong></p>
+<ul>
+<li>发送消息的应用程序</li>
+<li>例如：订单系统发送”新订单创建”的消息</li>
+</ul>
+</li>
+<li><p><strong>Consumer（消费者）</strong></p>
+<ul>
+<li>接收消息的应用程序</li>
+<li>例如：库存系统接收”新订单创建”的消息来减库存</li>
+</ul>
+</li>
+<li><p><strong>Queue（队列）</strong></p>
+<ul>
+<li>存储消息的缓冲区</li>
+<li>消息会一直留在队列中，直到被消费者处理</li>
+</ul>
+</li>
+<li><p><strong>Exchange（交换机）</strong></p>
+<ul>
+<li>接收生产者发送的消息，并根据特定规则将消息路由到一个或多个队列</li>
+<li>类似邮局的分拣中心</li>
+</ul>
+</li>
+<li><p><strong>Binding（绑定）</strong></p>
+<ul>
+<li>Exchange和Queue之间的连接关系</li>
+<li>定义了消息应该如何从Exchange路由到Queue</li>
+</ul>
+</li>
+<li><p><strong>Routing Key（路由键）</strong></p>
+<ul>
+<li>生产者发送消息时指定的属性</li>
+<li>Exchange用它来决定如何路由消息</li>
+</ul>
+</li>
+<li><p><strong>Virtual Host（虚拟主机）</strong></p>
+<ul>
+<li>类似于命名空间，用于将不同的应用环境隔离开</li>
+</ul>
+</li>
+</ol>
+<h3 id="Exchange类型详解"><a href="#Exchange类型详解" class="headerlink" title="Exchange类型详解"></a>Exchange类型详解</h3><p>RabbitMQ有四种主要的Exchange类型，每种类型决定了消息如何被路由：</p>
+<h4 id="1-Direct-Exchange（直接交换机）"><a href="#1-Direct-Exchange（直接交换机）" class="headerlink" title="1. Direct Exchange（直接交换机）"></a>1. Direct Exchange（直接交换机）</h4><ul>
+<li><strong>特点</strong>：精确匹配Routing Key</li>
+<li><strong>路由规则</strong>：将消息路由到Binding Key与Routing Key完全匹配的队列</li>
+<li><strong>适用场景</strong>：一对一精确投递</li>
+<li><strong>注意</strong>: 一对一精准投递并不是说只有一个 <code>Queue</code> 可以接收，下面示意图中，如果 <code>Direct Exchange</code> 用同一个 <code>RoutingKey</code> 绑定了多个 <code>Queue</code>，那么，<code>Queue A</code> 和 <code>Queue B</code> 则都能接收到</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># 示意图</span><br><span class="line">Producer --[RoutingKey=&quot;order&quot;]--&gt;  Direct Exchange --[BindingKey=&quot;order&quot;]--&gt; Queue A</span><br><span class="line">                                                    --[BindingKey=&quot;payment&quot;]--&gt; Queue B</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-Fanout-Exchange（扇出交换机）"><a href="#2-Fanout-Exchange（扇出交换机）" class="headerlink" title="2. Fanout Exchange（扇出交换机）"></a>2. Fanout Exchange（扇出交换机）</h4><ul>
+<li><strong>特点</strong>：广播模式，忽略Routing Key</li>
+<li><strong>路由规则</strong>：将消息路由到所有绑定到该Exchange的队列</li>
+<li><strong>适用场景</strong>：一对多广播，如日志广播</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># 示意图</span><br><span class="line">Producer -----------------&gt; Fanout Exchange -------&gt; Queue A</span><br><span class="line">                                           |-------&gt; Queue B</span><br><span class="line">                                           |-------&gt; Queue C</span><br></pre></td></tr></table></figure>
+
+<h4 id="3-Topic-Exchange（主题交换机）"><a href="#3-Topic-Exchange（主题交换机）" class="headerlink" title="3. Topic Exchange（主题交换机）"></a>3. Topic Exchange（主题交换机）</h4><ul>
+<li><strong>特点</strong>：模式匹配，支持通配符</li>
+<li><strong>路由规则</strong>：Routing Key可以使用通配符（*代表一个单词，#代表零个或多个单词）</li>
+<li><strong>适用场景</strong>：复杂的消息分类路由</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># 示意图</span><br><span class="line"># Routing Key: &quot;order.create&quot;</span><br><span class="line">Producer --[RoutingKey=&quot;order.create&quot;]--&gt; Topic Exchange --[BindingKey=&quot;order.*&quot;]--&gt; Queue A</span><br><span class="line">                                                        --[BindingKey=&quot;*.create&quot;]--&gt; Queue B</span><br><span class="line">                                                        --[BindingKey=&quot;#&quot;]--&gt; Queue C</span><br></pre></td></tr></table></figure>
+
+<h4 id="4-Headers-Exchange（头交换机）"><a href="#4-Headers-Exchange（头交换机）" class="headerlink" title="4. Headers Exchange（头交换机）"></a>4. Headers Exchange（头交换机）</h4><ul>
+<li><strong>特点</strong>：不依赖Routing Key，使用消息头部属性匹配</li>
+<li><strong>路由规则</strong>：根据消息的headers属性进行匹配</li>
+<li><strong>适用场景</strong>：需要基于多个属性进行路由（不常用）</li>
+</ul>
+<h2 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h2><h3 id="1-异步处理"><a href="#1-异步处理" class="headerlink" title="1. 异步处理"></a>1. 异步处理</h3><ul>
+<li><strong>场景</strong>：用户注册后发送欢迎邮件</li>
+<li><strong>好处</strong>：不需要让用户等待邮件发送完成，提升用户体验</li>
+<li><strong>实现</strong>：注册服务发送消息到队列，邮件服务消费队列进行处理</li>
+</ul>
+<h3 id="2-应用解耦"><a href="#2-应用解耦" class="headerlink" title="2. 应用解耦"></a>2. 应用解耦</h3><ul>
+<li><strong>场景</strong>：订单系统和库存系统通过消息通信</li>
+<li><strong>好处</strong>：系统间互不依赖，可以独立开发、部署和扩展</li>
+<li><strong>实现</strong>：通过消息队列作为中间层，实现系统间通信</li>
+</ul>
+<h3 id="3-流量削峰"><a href="#3-流量削峰" class="headerlink" title="3. 流量削峰"></a>3. 流量削峰</h3><ul>
+<li><strong>场景</strong>：电商秒杀活动</li>
+<li><strong>好处</strong>：将突发大量请求缓存到队列中慢慢处理，避免系统崩溃</li>
+<li><strong>实现</strong>：将请求存入队列，后台服务按照系统能力逐个处理</li>
+</ul>
+<h3 id="4-日志处理"><a href="#4-日志处理" class="headerlink" title="4. 日志处理"></a>4. 日志处理</h3><ul>
+<li><strong>场景</strong>：多个应用的日志统一处理</li>
+<li><strong>好处</strong>：不影响主业务流程，统一收集和分析日志</li>
+<li><strong>实现</strong>：应用将日志消息发送到队列，由专门的日志服务消费处理</li>
+</ul>
+<h2 id="高级特性简介"><a href="#高级特性简介" class="headerlink" title="高级特性简介"></a>高级特性简介</h2><ul>
+<li><strong>消息持久化</strong>：确保RabbitMQ重启后消息不丢失</li>
+<li><strong>消息确认机制</strong>：确保消息被正确处理</li>
+<li><strong>死信队列</strong>：处理无法被正常消费的消息</li>
+<li><strong>延迟队列</strong>：实现定时任务和消息延迟处理</li>
+<li><strong>优先级队列</strong>：按照优先级处理消息</li>
+<li><strong>集群部署</strong>：提高系统可用性和吞吐量</li>
+</ul>
+<h2 id="Mac-安装"><a href="#Mac-安装" class="headerlink" title="Mac 安装"></a>Mac 安装</h2><p>Mac 可以通过 brew 安装</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">(base) ➜  ~ brew install rabbitmq</span><br><span class="line"></span><br><span class="line">(base) ➜  ~ brew services list</span><br><span class="line">rabbitmq started root ~/Library/LaunchAgents/homebrew.mxcl.rabbitmq.plis</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>RabbitMQ就像应用程序之间的邮局，负责可靠地传递消息。通过交换机和队列的灵活组合，可以构建各种复杂的消息路由模式。虽然初学时有几个概念需要理解，但一旦掌握了这些基础知识，RabbitMQ就能成为你解决分布式系统问题的强大工具。</p>
+<p>对于初学者来说，建议先从简单的直连交换机模式开始尝试，逐步探索更复杂的路由方式。消息队列不是万能的，但对于需要解耦、异步处理或流量控制的场景，它绝对是一个值得考虑的选择。</p>
+<h2 id="学习资源"><a href="#学习资源" class="headerlink" title="学习资源"></a>学习资源</h2><ul>
+<li><a href="https://www.rabbitmq.com/documentation.html">RabbitMQ官方文档</a></li>
+<li><a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ教程</a></li>
+<li><a href="https://www.amqp.org/specification/0-9-1/amqp-org-download">AMQP协议规范</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>后端技术</category>
+        <category>中间件</category>
+      </categories>
+      <tags>
+        <tag>消息队列</tag>
+        <tag>RabbitMQ</tag>
+        <tag>分布式系统</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SpringBoot 3.4.3 引入 Nacos</title>
     <url>/posts/f70111e0-fbf0-11ef-bf15-9b6c9eaca0e7/</url>
     <content><![CDATA[<h2 id="安装-Nacos"><a href="#安装-Nacos" class="headerlink" title="安装 Nacos"></a>安装 Nacos</h2><p><a href="https://nacos.io/docs/latest/quickstart/quick-start/?spm=5238cd80.381747ab.0.0.488d5368Cj5EOP">查看官网手册</a></p>
