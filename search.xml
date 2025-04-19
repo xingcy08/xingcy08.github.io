@@ -17,6 +17,29 @@
     
     
     <entry>
+      <title>线上 Nginx work_connections 连接数超了</title>
+      <link href="/posts/0272daa0-1b3a-11f0-b5e9-c7cfcbccb363/"/>
+      <url>/posts/0272daa0-1b3a-11f0-b5e9-c7cfcbccb363/</url>
+      
+        <content type="html"><![CDATA[<h2 id="问题现象"><a href="#问题现象" class="headerlink" title="问题现象"></a>问题现象</h2><p>最近收到告警通知，部分接口出现 Nginx 500 错误。查看 Nginx 错误日志发现：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">2025/04/17 10:40:20 [alert] 2403#2403: *5114106677 9216 worker_connections are not enough while connecting to upstream, client: 180.115.116.154, server: xx.xx.cn, request: &quot;POST /report/launch HTTP/2.0&quot;, upstream: &quot;http://172.18.20.232:9601/report/launch&quot;, host: &quot;xx.xx.cn&quot;</span><br></pre></td></tr></table></figure><h2 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h2><h3 id="Nginx-核心参数说明"><a href="#Nginx-核心参数说明" class="headerlink" title="Nginx 核心参数说明"></a>Nginx 核心参数说明</h3><p>Nginx 的两个关键性能参数：</p><ol><li><p><strong>worker_processes</strong>：Nginx 工作进程数量</p><ul><li>通常设置为 CPU 核心数</li><li>建议不超过 8 个，避免系统不稳定</li></ul></li><li><p><strong>worker_connections</strong>：每个工作进程的最大并发连接数</p><ul><li>直接影响 Nginx 并发性能</li><li>受系统内核单进程最大文件描述符数量限制（<code>ulimit -n</code>）</li></ul></li></ol><h3 id="重要概念"><a href="#重要概念" class="headerlink" title="重要概念"></a>重要概念</h3><ul><li><strong>ulimit -n</strong>：单个进程可打开的最大文件描述符数</li><li><strong>最大并发连接数计算</strong>：<code>worker_processes × worker_connections</code></li><li><strong>作为反向代理时的最大并发请求数</strong>：约为 <code>worker_processes × worker_connections / 2</code></li></ul><h3 id="连接数不足原因"><a href="#连接数不足原因" class="headerlink" title="连接数不足原因"></a>连接数不足原因</h3><p>在反向代理模式下，每个 HTTP 请求占用两个连接：</p><ol><li>客户端到 Nginx 的连接</li><li>Nginx 到后端服务器的连接</li></ol><p>当并发请求量超过配置的连接数上限时，就会出现本文所述错误。</p><h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>查看原有 nginx.conf 配置：</p><figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">worker_processes</span>  <span class="number">4</span>;</span><br><span class="line"></span><br><span class="line"><span class="section">events</span> &#123;</span><br><span class="line">    <span class="attribute">worker_connections</span>  <span class="number">9000</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>将 <code>worker_connections</code> 从 9000 调整为 15000，问题得到解决。</p><blockquote><p>注意：调整时应根据服务器硬件性能和实际业务负载评估，避免设置过大占用过多内存资源。</p></blockquote><h2 id="经验总结"><a href="#经验总结" class="headerlink" title="经验总结"></a>经验总结</h2><ol><li>Nginx 连接池机制会在请求处理完成后释放连接，放入 <code>free_connections</code> 链表中供复用</li><li>合理配置 <code>worker_processes</code> 和 <code>worker_connections</code> 对系统性能至关重要</li><li>调整参数时应循序渐进，不宜一次性做大幅调整</li></ol><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul><li><a href="https://juejin.cn/post/7319541661150527526">Nginx配置性能优化之worker配置教程</a></li><li><a href="https://blog.csdn.net/xyang81/article/details/51814787">Nginx核心配置深入理解及优化</a></li></ul>]]></content>
+      
+      
+      
+        <tags>
+            
+            <tag> Nginx </tag>
+            
+            <tag> 性能优化 </tag>
+            
+            <tag> 问题排查 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>SpringBoot项目统一响应设计与全局异常处理实践</title>
       <link href="/posts/c77e0ee0-186b-11f0-b3ab-b1c6f3d99510/"/>
       <url>/posts/c77e0ee0-186b-11f0-b3ab-b1c6f3d99510/</url>
