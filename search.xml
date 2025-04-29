@@ -4,6 +4,29 @@
   
     
     <entry>
+      <title>记一次域名在特定网络环境下无法访问的排查过程</title>
+      <link href="/posts/0fb65350-24d0-11f0-bbda-219bac6b43ab/"/>
+      <url>/posts/0fb65350-24d0-11f0-bbda-219bac6b43ab/</url>
+      
+        <content type="html"><![CDATA[<h2 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h2><p>某日，公司突然收到多位同事反馈我们的一个域名 xx.cn 无法正常访问，但奇怪的是这个问题并不是对所有人都存在。在我自己的电脑上，域名访问完全正常，这引起了我的好奇并开始了一系列排查。</p><h2 id="现象分析"><a href="#现象分析" class="headerlink" title="现象分析"></a>现象分析</h2><h3 id="初步排查"><a href="#初步排查" class="headerlink" title="初步排查"></a>初步排查</h3><p>在接到反馈后，我进行了以下测试：</p><ol><li><p>在我自己的手机上测试：</p><ul><li>连接WiFi时：无法访问</li><li>使用移动数据时：可以正常访问</li></ul></li><li><p>让多位同事进行测试，发现存在以下现象：</p><ul><li>有的同事断开WiFi后能访问，有的仍然不能</li><li>同事A拥有两张SIM卡：广电网络无法访问，电信网络能正常访问</li><li>同事B和同事C都使用移动网络，但一个能访问，一个不能访问</li></ul></li></ol><h3 id="排除服务器配置问题"><a href="#排除服务器配置问题" class="headerlink" title="排除服务器配置问题"></a>排除服务器配置问题</h3><p>这个现象十分特殊，因为：</p><ul><li>公司其他数十个域名均可正常访问</li><li>所有域名使用相同的Nginx配置</li><li>SSL证书申请逻辑一致</li></ul><p>为了排除SSL证书问题，我们重新申请了一个SSL证书，但问题依然存在。</p><h2 id="阿里云工单排查"><a href="#阿里云工单排查" class="headerlink" title="阿里云工单排查"></a>阿里云工单排查</h2><h3 id="网络拨测结果"><a href="#网络拨测结果" class="headerlink" title="网络拨测结果"></a>网络拨测结果</h3><p>我们向阿里云提交了工单。通过阿里云的<a href="https://boce.aliyun.com/detect/http">网络拨测工具</a>发现，确实在移动网络环境下访问异常：</p><p><img src="/../images/posts/0fb65350-24d0-11f0-bbda-219bac6b43ab/image.png" alt="网络拨测结果"></p><h3 id="最终结论"><a href="#最终结论" class="headerlink" title="最终结论"></a>最终结论</h3><p>经阿里云联系网络运营商核实后，得到的反馈是：</p><blockquote><p>该域名被上级部门临时封堵，现已解封</p></blockquote><p>遗憾的是，关于域名被封堵的具体原因，运营商并未提供详细说明，只表示域名已解封，可以恢复正常访问。</p><h2 id="总结与思考"><a href="#总结与思考" class="headerlink" title="总结与思考"></a>总结与思考</h2><p>这次故障排查经历让我们认识到：</p><ol><li>域名访问问题可能与网络运营商策略有关，不一定是服务器或配置问题</li><li>不同运营商、不同网络环境对同一域名的处理可能存在差异</li><li>在遇到类似问题时，除了检查自身配置，也需要考虑外部因素的影响</li></ol><p>当遇到域名无法访问且现象复杂时，网络拨测工具是一个有效的排查手段，能够帮助我们快速定位是否存在特定网络环境下的访问问题。</p>]]></content>
+      
+      
+      
+        <tags>
+            
+            <tag> 网络故障 </tag>
+            
+            <tag> 域名访问 </tag>
+            
+            <tag> 故障排查 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Mac PHP8.1.13 安装 Redis 扩展</title>
       <link href="/posts/55f7fdf0-23f9-11f0-b761-dfb6a7a2305f/"/>
       <url>/posts/55f7fdf0-23f9-11f0-b761-dfb6a7a2305f/</url>
@@ -24,11 +47,11 @@
             
             <tag> PHP </tag>
             
+            <tag> Mac </tag>
+            
             <tag> Redis </tag>
             
             <tag> MAMP </tag>
-            
-            <tag> Mac </tag>
             
         </tags>
       
@@ -57,11 +80,11 @@
             
             <tag> PHP </tag>
             
-            <tag> Mac </tag>
-            
             <tag> Swoole </tag>
             
             <tag> 扩展安装 </tag>
+            
+            <tag> Mac </tag>
             
         </tags>
       
